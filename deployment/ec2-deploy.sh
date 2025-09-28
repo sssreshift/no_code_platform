@@ -7,7 +7,6 @@ set -e  # Exit on any error
 set -u  # Exit on undefined variables
 
 # Configuration
-REPO_URL="https://github.com/sssreshift/no_code_platform.git"
 APP_DIR="/opt/reshift"
 DOMAIN="${1:-app.reshift.co.uk}"  # Use first argument or default
 LOG_FILE="/tmp/reshift-deploy.log"
@@ -78,16 +77,19 @@ log "📁 Creating application directory..."
 sudo mkdir -p "$APP_DIR"
 sudo chown $USER:$USER "$APP_DIR"
 
-# Clone repository
-log "📥 Cloning repository from GitHub..."
-if [ -d "$APP_DIR/.git" ]; then
-    log "Repository already exists, pulling latest changes..."
-    cd "$APP_DIR"
-    git pull origin main
-else
-    git clone "$REPO_URL" "$APP_DIR"
-    cd "$APP_DIR"
+# Use existing repository (no git operations)
+log "📁 Using existing repository..."
+if [ ! -d "$APP_DIR" ]; then
+    error "Application directory $APP_DIR does not exist. Please clone the repository first."
 fi
+cd "$APP_DIR"
+
+# Verify we're in a git repository
+if [ ! -d ".git" ]; then
+    error "Not a git repository. Please ensure you're in the correct directory."
+fi
+
+log "✅ Repository found at $APP_DIR"
 
 # Set up backend
 log "🐍 Setting up Python backend..."
