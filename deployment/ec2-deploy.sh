@@ -77,19 +77,23 @@ log "📁 Creating application directory..."
 sudo mkdir -p "$APP_DIR"
 sudo chown $USER:$USER "$APP_DIR"
 
-# Use existing repository (no git operations)
-log "📁 Using existing repository..."
-if [ ! -d "$APP_DIR" ]; then
-    error "Application directory $APP_DIR does not exist. Please clone the repository first."
+# Copy repository to deployment directory
+log "📁 Copying repository to deployment directory..."
+if [ ! -d "$(pwd)" ]; then
+    error "Current directory does not exist. Please run from the project root."
 fi
+
+# Create and set up application directory
+sudo mkdir -p "$APP_DIR"
+sudo chown $USER:$USER "$APP_DIR"
+
+# Copy current repository to deployment directory
+log "Copying files from $(pwd) to $APP_DIR"
+sudo cp -r . "$APP_DIR/"
+sudo chown -R $USER:$USER "$APP_DIR"
+
 cd "$APP_DIR"
-
-# Verify we're in a git repository
-if [ ! -d ".git" ]; then
-    error "Not a git repository. Please ensure you're in the correct directory."
-fi
-
-log "✅ Repository found at $APP_DIR"
+log "✅ Repository copied to $APP_DIR"
 
 # Set up backend
 log "🐍 Setting up Python backend..."
@@ -121,8 +125,10 @@ if [ ! -f "package.json" ]; then
     error "package.json not found in frontend directory"
 fi
 
-# Install frontend dependencies
-log "Installing Node.js dependencies..."
+# Clean and install frontend dependencies
+log "Cleaning npm cache and installing Node.js dependencies..."
+npm cache clean --force
+rm -rf node_modules package-lock.json
 npm install
 
 # Create production configuration
