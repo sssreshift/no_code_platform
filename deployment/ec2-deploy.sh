@@ -178,13 +178,61 @@ if [ ! -d "dist" ]; then
     error "Frontend build failed - dist directory not found"
 fi
 
-# Configure Nginx
-log "🌐 Configuring Nginx..."
-# Update nginx config with actual domain
-sed "s/app\.reshift\.co\.uk/$DOMAIN/g" "$APP_DIR/deployment/nginx.conf" > /tmp/nginx-reshift.conf
-sed "s/www\.app\.reshift\.co\.uk/www.$DOMAIN/g" /tmp/nginx-reshift.conf > /tmp/nginx-reshift-final.conf
+# Configure Nginx (HTTP-only first, SSL later)
+log "🌐 Configuring Nginx (HTTP-only)..."
 
-sudo cp /tmp/nginx-reshift-final.conf /etc/nginx/sites-available/reshift
+# Create temporary HTTP-only nginx config
+cat > /tmp/nginx-reshift-http.conf << EOF
+server {
+    listen 80;
+    server_name $DOMAIN www.$DOMAIN;
+    
+    # Frontend (React app)
+    location / {
+        root /opt/reshift/frontend/dist;
+        index index.html;
+        try_files \$uri \$uri/ /index.html;
+        
+        # Cache static assets
+        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)\$ {
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
+    }
+    
+    # Backend API
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        
+        # Timeout settings
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+    
+    # WebSocket support for real-time features
+    location /ws/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+
+sudo cp /tmp/nginx-reshift-http.conf /etc/nginx/sites-available/reshift
 sudo ln -sf /etc/nginx/sites-available/reshift /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 
@@ -224,7 +272,24 @@ sudo supervisorctl status
 # SSL Certificate setup (optional)
 if [ "$DOMAIN" != "localhost" ] && [ "$DOMAIN" != "$PUBLIC_IP" ]; then
     log "🔒 Setting up SSL certificate..."
-    sudo certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" --non-interactive --agree-tos --email "admin@$DOMAIN" --redirect || log "SSL setup skipped - configure manually if needed"
+    # Get SSL certificate
+    sudo certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" --non-interactive --agree-tos --email "admin@$DOMAIN" --redirect
+    
+    if [ $? -eq 0 ]; then
+        log "✅ SSL certificate obtained successfully"
+        # Update to full SSL nginx config
+        log "🔒 Updating Nginx configuration with SSL..."
+        sed "s/app\.reshift\.co\.uk/$DOMAIN/g" "$APP_DIR/deployment/nginx.conf" > /tmp/nginx-reshift.conf
+        sed "s/www\.app\.reshift\.co\.uk/www.$DOMAIN/g" /tmp/nginx-reshift.conf > /tmp/nginx-reshift-final.conf
+        
+        sudo cp /tmp/nginx-reshift-final.conf /etc/nginx/sites-available/reshift
+        sudo nginx -t && sudo systemctl reload nginx
+        log "✅ SSL configuration updated"
+    else
+        log "⚠️ SSL setup failed - application running on HTTP only"
+    fi
+else
+    log "⚠️ SSL setup skipped for localhost/IP - application running on HTTP only"
 fi
 
 # Display summary
