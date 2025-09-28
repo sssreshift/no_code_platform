@@ -1,0 +1,64 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies and test
+      run: |
+        # Frontend tests
+        cd frontend
+        npm ci
+        npm run build
+        
+        # Backend tests  
+        cd ../backend
+        pip install -r requirements.txt
+        # Add your tests here
+        
+    - name: Deploy to EC2
+      env:
+        PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
+        HOSTNAME: ${{ secrets.EC2_HOSTNAME }}
+        USER_NAME: ubuntu
+      run: |
+        echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
+        ssh -o StrictHostKeyChecking=no -i private_key ${USER_NAME}@${HOSTNAME} '
+          cd /opt/reshift &&
+          git pull origin main &&
+          
+          # Update backend
+          cd backend &&
+          source venv/bin/activate &&
+          pip install -r requirements.txt &&
+          
+          # Update frontend
+          cd ../frontend &&
+          npm install &&
+          npm run build &&
+          
+          # Restart services
+          sudo supervisorctl restart all &&
+          sudo systemctl reload nginx &&
+          
+          echo "✅ Deployment completed successfully!"
+        '
