@@ -170,7 +170,8 @@ EOF
 # Build frontend
 log "🏗️ Building frontend application..."
 cd "$APP_DIR/frontend"
-npm run build
+# Use memory-optimized build for production
+npm run build:production
 
 # Verify build
 if [ ! -d "dist" ]; then
