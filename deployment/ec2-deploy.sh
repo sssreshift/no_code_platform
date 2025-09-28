@@ -242,9 +242,40 @@ sudo nginx -t || error "Nginx configuration test failed"
 # Configure Supervisor
 log "🔧 Configuring Supervisor..."
 sudo mkdir -p /var/log/reshift
+sudo mkdir -p /opt/reshift/uploads
 sudo chown www-data:www-data /var/log/reshift
+sudo chown www-data:www-data /opt/reshift/uploads
 
-sudo cp "$APP_DIR/deployment/supervisor.conf" /etc/supervisor/conf.d/reshift.conf
+# Create optimized supervisor config (no frontend service needed since nginx serves static files)
+cat > /tmp/supervisor-reshift.conf << EOF
+# Supervisor configuration for Reshift No-Code Platform
+
+[program:reshift-backend]
+command=/opt/reshift/backend/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+directory=/opt/reshift/backend
+user=www-data
+autostart=true
+autorestart=true
+redirect_stderr=true
+stdout_logfile=/var/log/reshift/backend.log
+stdout_logfile_maxbytes=10MB
+stdout_logfile_backups=5
+environment=PATH="/opt/reshift/backend/venv/bin",PYTHONPATH="/opt/reshift/backend"
+
+# Static file server for uploads (optional)
+[program:reshift-assets]
+command=/opt/reshift/backend/venv/bin/python -m http.server 8080
+directory=/opt/reshift/uploads
+user=www-data
+autostart=true
+autorestart=true
+redirect_stderr=true
+stdout_logfile=/var/log/reshift/assets.log
+stdout_logfile_maxbytes=10MB
+stdout_logfile_backups=5
+EOF
+
+sudo cp /tmp/supervisor-reshift.conf /etc/supervisor/conf.d/reshift.conf
 
 # Configure firewall
 log "🛡️ Configuring firewall..."
