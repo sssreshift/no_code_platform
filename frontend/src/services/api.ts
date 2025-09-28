@@ -4,6 +4,7 @@ import type {
   LoginData,
   RegisterData,
   App,
+  AppWithContent,
   Component,
   DataSource,
   DataSourceTestResult,
