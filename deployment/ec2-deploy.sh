@@ -251,7 +251,7 @@ cat > /tmp/supervisor-reshift.conf << EOF
 # Supervisor configuration for Reshift No-Code Platform
 
 [program:reshift-backend]
-command=/opt/reshift/backend/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+command=/opt/reshift/backend/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2
 directory=/opt/reshift/backend
 user=www-data
 autostart=true
