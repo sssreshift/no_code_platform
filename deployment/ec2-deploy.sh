@@ -107,7 +107,7 @@ fi
 # Create virtual environment
 if [ ! -d "venv" ]; then
     log "Creating Python virtual environment..."
-    python3.11 -m venv venv
+python3.11 -m venv venv
 fi
 
 # Activate virtual environment and install dependencies
@@ -162,9 +162,10 @@ EOF
 # Frontend production config
 log "Creating frontend environment configuration..."
 cat > "$APP_DIR/frontend/.env.production" << EOF
-VITE_API_BASE_URL=https://$DOMAIN/api/v1
+VITE_API_BASE_URL=/api/v1
 VITE_APP_NAME=Reshift No-Code Platform
 VITE_APP_VERSION=1.0.0
+NODE_ENV=production
 EOF
 
 # Build frontend
@@ -202,7 +203,7 @@ server {
     
     # Backend API
     location /api/ {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://127.0.0.1:8000/api/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -216,6 +217,26 @@ server {
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
+    }
+    
+    # FastAPI Documentation
+    location /docs {
+        proxy_pass http://127.0.0.1:8000/docs;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+    
+    # OpenAPI JSON
+    location /openapi.json {
+        proxy_pass http://127.0.0.1:8000/openapi.json;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
     
     # WebSocket support for real-time features
