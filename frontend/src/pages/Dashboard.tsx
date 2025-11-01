@@ -24,15 +24,60 @@ import { useState } from 'react'
 
 import { appsApi } from '@/services/api'
 import { CreateAppDialog } from '@/components/CreateAppDialog'
+import { useAuth } from '@/hooks/useAuth'
 import type { App } from '@/types'
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const { isAuthenticated, token } = useAuth()
+
+  // Don't render until auth is fully initialized
+  if (!isAuthenticated || !token || !localStorage.getItem('token')) {
+    return (
+      <Box sx={{ 
+        width: '100%', 
+        maxWidth: '100%',
+        mx: 'auto',
+        px: { xs: 2, sm: 3, md: 4 },
+        py: 2,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 400
+      }}>
+        <Box sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 2
+        }}>
+          <Box sx={{
+            width: 40,
+            height: 40,
+            border: '4px solid #f3f3f3',
+            borderTop: '4px solid #667eea',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            '@keyframes spin': {
+              '0%': { transform: 'rotate(0deg)' },
+              '100%': { transform: 'rotate(360deg)' }
+            }
+          }} />
+          <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 500 }}>
+            Initializing authentication...
+          </Typography>
+        </Box>
+      </Box>
+    )
+  }
 
   const { data: apps = [], isLoading, refetch } = useQuery({
     queryKey: ['apps'],
     queryFn: () => appsApi.getApps(),
+    enabled: isAuthenticated && !!token && !!localStorage.getItem('token'), // Only run query when authenticated with token
+    retry: false, // Don't retry on failure to avoid loops
   })
 
   const handleCreateApp = () => {
@@ -458,7 +503,7 @@ export const Dashboard: React.FC = () => {
                     {app.is_published && (
                       <IconButton
                         size="small"
-                        onClick={() => window.open(`http://localhost:3000/apps/slug/${app.slug}`, '_blank')}
+                        onClick={() => window.open(`${window.location.origin}/apps/slug/${app.slug}`, '_blank')}
                         title="Open Published App"
                         sx={{
                           backgroundColor: 'success.main',

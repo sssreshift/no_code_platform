@@ -24,6 +24,9 @@ export const useAuthStore = create<AuthState>()(
           // Get user info
           const user = await authApi.getCurrentUser()
           console.log('User info retrieved:', user)
+
+          // Persist user for initializeAuth compatibility
+          localStorage.setItem('user', JSON.stringify(user))
           
           set({
             user,

@@ -11,6 +11,7 @@ from app.models.user import UserRole
 router = APIRouter()
 
 @router.get("/", response_model=List[App])
+@router.get("", response_model=List[App])
 def get_apps(
     skip: int = 0,
     limit: int = 100,
@@ -24,6 +25,7 @@ def get_apps(
 
 
 @router.post("/", response_model=App)
+@router.post("", response_model=App)
 def create_app(
     app_data: AppCreate,
     db: Session = Depends(get_db),

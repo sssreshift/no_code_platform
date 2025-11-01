@@ -16,7 +16,7 @@ import type {
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
+  baseURL: (import.meta as any).env.VITE_API_BASE_URL || '/api/v1',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -42,8 +42,9 @@ api.interceptors.response.use(
       console.log('401 Unauthorized - Clearing auth data and redirecting to login')
       localStorage.removeItem('token')
       localStorage.removeItem('user')
-      // Only redirect if not already on login page
-      if (window.location.pathname !== '/login') {
+      // Only redirect if not already on login page and not during login process
+      if (window.location.pathname !== '/login' && !error.config?.url?.includes('/auth/login')) {
+        console.log('Redirecting to login due to 401')
         window.location.href = '/login'
       }
     }

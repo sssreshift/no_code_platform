@@ -13,7 +13,8 @@ from app.models.user import User
 router = APIRouter()
 
 
-@router.post("/", response_model=dict)
+
+@router.post("", response_model=dict)
 def create_page(
     page_data: PageCreate,
     db: Session = Depends(get_db),
@@ -65,7 +66,8 @@ def create_page(
         )
 
 
-@router.get("/", response_model=dict)
+
+@router.get("", response_model=dict)
 def get_page(
     app_id: int = Query(..., description="App ID to get page for"),
     db: Session = Depends(get_db),
@@ -93,7 +95,7 @@ def get_page(
     return page
 
 
-@router.put("/", response_model=dict)
+@router.put("", response_model=dict)
 def update_page(
     app_id: int = Query(..., description="App ID to update page for"),
     page_data: PageUpdate = None,
@@ -122,7 +124,8 @@ def update_page(
     return updated_page
 
 
-@router.delete("/")
+
+@router.delete("")
 def delete_page(
     app_id: int = Query(..., description="App ID to delete page for"),
     db: Session = Depends(get_db),
