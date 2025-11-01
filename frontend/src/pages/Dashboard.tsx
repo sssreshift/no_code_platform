@@ -503,7 +503,10 @@ export const Dashboard: React.FC = () => {
                     {app.is_published && (
                       <IconButton
                         size="small"
-                        onClick={() => window.open(`${window.location.origin}/apps/slug/${app.slug}`, '_blank')}
+                        onClick={() => {
+                          const baseUrl = (import.meta as any).env.VITE_APP_URL || window.location.origin;
+                          window.open(`${baseUrl}/apps/slug/${app.slug}`, '_blank');
+                        }}
                         title="Open Published App"
                         sx={{
                           backgroundColor: 'success.main',
